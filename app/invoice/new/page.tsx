@@ -1,16 +1,15 @@
-"use client";
+// app/invoice/new/page.tsx
+import dynamic from 'next/dynamic';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
-import InvoiceForm from "@/components/InvoiceForm";
+// Formu client'ta çalıştır (SSR kapalı)
+const InvoiceForm = dynamic(
+  () => import('@/components/invoice-form').then(m => m.default || m.InvoiceForm),
+  { ssr: false }
+);
 
-export default function NewInvoicePage() {
-  return (
-    <div className="min-h-[60vh] max-w-xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-semibold mb-4 text-emerald-700">New Invoice</h1>
-      <div className="bg-white rounded-2xl shadow p-6">
-        <InvoiceForm />
-      </div>
-    </div>
-  );
+export default function Page() {
+  return <InvoiceForm />;
 }
