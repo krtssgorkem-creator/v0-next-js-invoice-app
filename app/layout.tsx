@@ -1,28 +1,15 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
-import { Analytics } from "@vercel/analytics/next"
-import { Suspense } from "react"
-import "./globals.css"
+// app/layout.tsx
+import "@/styles/globals.css";
+import { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "Secure Global Invoice Automator",
-  description: "Professional invoicing with VAT/GDPR compliance for global businesses",
-  generator: "v0.app",
-}
+export const metadata = { title: "Secure Global Invoice Automator" };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>{children}</Suspense>
-        <Analytics />
+    <html lang="tr">
+      <body className="min-h-screen bg-gray-50 text-gray-900">
+        <div className="mx-auto max-w-5xl p-4">{children}</div>
       </body>
     </html>
-  )
+  );
 }
