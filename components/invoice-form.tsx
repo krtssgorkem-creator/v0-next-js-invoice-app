@@ -1,237 +1,133 @@
-"use client"
-
-import type React from "react"
-
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CountrySelect } from "@/components/country-select"
-import { GdprConsent } from "@/components/gdpr-consent"
-import { LegalNotice } from "@/components/legal-notice"
-import { InvoicePreview } from "@/components/invoice-preview"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-export type InvoiceData = {
-  clientName: string
-  clientCountry: string
-  serviceDescription: string
-  amount: string
-  currency: string
-  clientVatId: string
-  email: string
-  gdprConsent: boolean
-}
+// components/InvoiceForm.tsx
+"use client";
+import { useState } from "react";
+import type { Invoice } from "@/lib/types";
+import { saveInvoice } from "@/lib/store";
+import { gdprConsent, legalNoticeByCountry } from "@/lib/legal";
+import { PDFPreview } from "@/components/PDFPreview";
 
 export function InvoiceForm() {
-  const [formData, setFormData] = useState<InvoiceData>({
+  const [form, setForm] = useState<Invoice>({
+    id: crypto.randomUUID(),
     clientName: "",
-    clientCountry: "",
-    serviceDescription: "",
-    amount: "",
-    currency: "USD",
-    clientVatId: "",
-    email: "",
-    gdprConsent: false,
-  })
+    clientEmail: "",
+    clientCountry: "US",
+    description: "",
+    amount: 0,
+    currency: "usd",
+    status: "pending",
+    payInfo: "",
+    createdAt: new Date().toISOString(),
+  });
+  const [showPreview, setShowPreview] = useState(false);
 
-  const [errors, setErrors] = useState<Partial<Record<keyof InvoiceData, string>>>({})
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Basic validation
-    const newErrors: Partial<Record<keyof InvoiceData, string>> = {}
-
-    if (!formData.clientName.trim()) {
-      newErrors.clientName = "Client name is required"
-    }
-    if (!formData.clientCountry) {
-      newErrors.clientCountry = "Client country is required"
-    }
-    if (!formData.serviceDescription.trim()) {
-      newErrors.serviceDescription = "Service description is required"
-    }
-    if (!formData.amount || Number.parseFloat(formData.amount) <= 0) {
-      newErrors.amount = "Valid amount is required"
-    }
-    if (!formData.gdprConsent) {
-      newErrors.gdprConsent = "GDPR consent is required"
-    }
-
-    setErrors(newErrors)
-
-    if (Object.keys(newErrors).length === 0) {
-      console.log("[v0] Invoice form submitted:", JSON.stringify(formData, null, 2))
-      alert("Invoice data logged to console. Check browser console for details.")
-    }
+  function update<K extends keyof Invoice>(k: K, v: Invoice[K]) {
+    setForm((f) => ({ ...f, [k]: v }));
   }
 
-  const updateField = (field: keyof InvoiceData, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }))
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.clientName || !form.clientEmail || !form.description || !form.amount) {
+      return alert("Lütfen zorunlu alanları doldurun.");
     }
+    saveInvoice(form);
+    setShowPreview(true);
   }
 
   return (
-    <div className="grid lg:grid-cols-2 gap-8">
-      {/* Form Section */}
+    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <label className="mb-1 block text-sm">Müşteri Adı *</label>
+          <input
+            className="w-full rounded-lg border p-2"
+            value={form.clientName}
+            onChange={(e) => update("clientName", e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm">Müşteri E-posta *</label>
+          <input
+            className="w-full rounded-lg border p-2"
+            value={form.clientEmail}
+            onChange={(e) => update("clientEmail", e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm">Müşteri Ülke</label>
+          <select
+            className="w-full rounded-lg border p-2"
+            value={form.clientCountry}
+            onChange={(e) => update("clientCountry", e.target.value)}
+          >
+            <option value="US">United States</option>
+            <option value="DE">Germany</option>
+            <option value="TR">Turkey</option>
+            <option value="GB">United Kingdom</option>
+            <option value="FR">France</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm">Hizmet Açıklaması *</label>
+          <input
+            className="w-full rounded-lg border p-2"
+            value={form.description}
+            onChange={(e) => update("description", e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm">Tutar *</label>
+            <input
+              type="number"
+              className="w-full rounded-lg border p-2"
+              value={form.amount}
+              onChange={(e) => update("amount", Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm">Para Birimi</label>
+            <select
+              className="w-full rounded-lg border p-2"
+              value={form.currency}
+              onChange={(e) => update("currency", e.target.value as any)}
+            >
+              <option value="usd">USD</option>
+              <option value="eur">EUR</option>
+              <option value="try">TRY</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm">Ödeme Bilgisi (Wise/Payoneer/IBAN)</label>
+          <textarea
+            className="w-full rounded-lg border p-2"
+            rows={3}
+            placeholder="Örn: EUR IBAN: BE12 3456 7890 1234 — Ad Soyad"
+            value={form.payInfo}
+            onChange={(e) => update("payInfo", e.target.value)}
+          />
+        </div>
+
+        <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
+          <p className="font-medium">GDPR Onayı (müşteriye gösterilecek):</p>
+          <p>{gdprConsent}</p>
+        </div>
+
+        <button className="w-full rounded-lg bg-emerald-600 py-2 text-white">
+          Fatura Oluştur & Önizle
+        </button>
+      </form>
+
       <div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Client Name */}
-              <div className="space-y-2">
-                <Label htmlFor="clientName">
-                  Client Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="clientName"
-                  type="text"
-                  value={formData.clientName}
-                  onChange={(e) => updateField("clientName", e.target.value)}
-                  aria-required="true"
-                  aria-invalid={!!errors.clientName}
-                  aria-describedby={errors.clientName ? "clientName-error" : undefined}
-                />
-                {errors.clientName && (
-                  <p id="clientName-error" className="text-sm text-destructive">
-                    {errors.clientName}
-                  </p>
-                )}
-              </div>
-
-              {/* Client Country */}
-              <div className="space-y-2">
-                <Label htmlFor="clientCountry">
-                  Client Country <span className="text-destructive">*</span>
-                </Label>
-                <CountrySelect
-                  value={formData.clientCountry}
-                  onChange={(value) => updateField("clientCountry", value)}
-                  error={errors.clientCountry}
-                />
-              </div>
-
-              {/* Service Description */}
-              <div className="space-y-2">
-                <Label htmlFor="serviceDescription">
-                  Service Description <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="serviceDescription"
-                  value={formData.serviceDescription}
-                  onChange={(e) => updateField("serviceDescription", e.target.value)}
-                  rows={4}
-                  aria-required="true"
-                  aria-invalid={!!errors.serviceDescription}
-                  aria-describedby={errors.serviceDescription ? "serviceDescription-error" : undefined}
-                />
-                {errors.serviceDescription && (
-                  <p id="serviceDescription-error" className="text-sm text-destructive">
-                    {errors.serviceDescription}
-                  </p>
-                )}
-              </div>
-
-              {/* Amount and Currency */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">
-                    Amount <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.amount}
-                    onChange={(e) => updateField("amount", e.target.value)}
-                    aria-required="true"
-                    aria-invalid={!!errors.amount}
-                    aria-describedby={errors.amount ? "amount-error" : undefined}
-                  />
-                  {errors.amount && (
-                    <p id="amount-error" className="text-sm text-destructive">
-                      {errors.amount}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select value={formData.currency} onValueChange={(value) => updateField("currency", value)}>
-                    <SelectTrigger id="currency" aria-label="Select currency">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="TRY">TRY</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Client VAT ID */}
-              <div className="space-y-2">
-                <Label htmlFor="clientVatId">Client VAT ID (Optional)</Label>
-                <Input
-                  id="clientVatId"
-                  type="text"
-                  value={formData.clientVatId}
-                  onChange={(e) => updateField("clientVatId", e.target.value)}
-                  placeholder="e.g., DE123456789"
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email (Optional)</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => updateField("email", e.target.value)}
-                  placeholder="client@example.com"
-                />
-              </div>
-
-              {/* Legal Notice */}
-              <LegalNotice country={formData.clientCountry} />
-
-              {/* GDPR Consent */}
-              <GdprConsent
-                checked={formData.gdprConsent}
-                onChange={(checked) => updateField("gdprConsent", checked)}
-                error={errors.gdprConsent}
-              />
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={!formData.gdprConsent}
-                aria-disabled={!formData.gdprConsent}
-              >
-                Generate Invoice
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Preview Section */}
-      <div className="lg:sticky lg:top-8 lg:self-start">
-        <InvoicePreview data={formData} />
+        {showPreview ? (
+          <PDFPreview invoice={form} legalText={legalNoticeByCountry(form.clientCountry)} />
+        ) : (
+          <div className="rounded-lg border p-6 text-sm text-gray-600">
+            Sağda PDF önizleme görünecek.
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }
