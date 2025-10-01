@@ -6,7 +6,7 @@ export const fetchCache = 'force-no-store';
 
 // Formu client'ta çalıştır (SSR kapalı)
 const InvoiceForm = dynamic(
-  () => import('@/components/invoice-form').then(m => m.default || m.InvoiceForm),
+  () => import('@/components/InvoiceForm').then(m => m.default || m.InvoiceForm),
   { ssr: false }
 );
 
