@@ -1,6 +1,6 @@
 "use client";
-
-export const dynamic = "force-dynamic"; // SSG yerine runtime'da render et
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 import InvoiceForm from "@/components/InvoiceForm";
 
