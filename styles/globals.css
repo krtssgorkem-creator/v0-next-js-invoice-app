@@ -2,8 +2,5 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: system-ui, sans-serif;
-  background-color: #f9fafb;
-  color: #111827;
-}
+/* Opsiyonel: body için ufak reset */
+html, body { height: 100%; }
